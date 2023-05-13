@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Ultimate Moe</title>
+	<style>
+		body{
+			font-family:"Comic Sans Ms";
+			border:5px dashed rgb(50, 200, 150);
+			background:rgb(45, 155, 150);
+		}
+		h1{
+			background:rgb(255, 255, 255);
+			text-align:center;
+		}
+		canvas{
+			margin-left:120px;
+			margin-right:60px;
+		}
+	</style>
+</head>
+<body>
+	<h1>Ultimate Moe</h1>
+	<canvas id = "canvas" width = "700" height = "400"></canvas>
+	<script src="https://code.jquery.com/jquery-2.1.0.js"></script>
+	
+	<script>
+	/* 
+	This game is a platformer that revolves around the
+	main character Moe, a little stick figure like person.
+	
+	You use the arrow keys to move and the space bar to jump
+	
+		 thanks to Nick Morgan, whose book taught me a ton!
+		 
+		-made through March 2017 to April 17 2017 by Jake Johnston
+		
+		ENJOY!
+	*/
+	
+
+	//create canvas
+		var canvas = document.getElementById("canvas");
+		var ctx = canvas.getContext("2d");
+		var width = canvas.width;
+		var height = canvas.height;
+		
+	//playing represents whether or not the game has ended yet
+		var playing = true;
+		var started = false; 	
+		
+	//create translator from key numbers to motions
+		var keyNum = {
+			37:"left",
+			39:"right",
+			38:"jump",
+			87:"jump",
+			65:"left",
+			68:"right",
+			80:"pause"
+		};
+		
+		
+	//create circle function (to make drawing circles simpler  
+		var circle = function(x, y, radius, fill, color){
+			ctx.strokeStyle = color;
+			ctx.fillStyle = color;
+			ctx.beginPath();
+			ctx.arc(x, y, radius, 0, Math.PI*2, false);
+			if(fill) {
+				ctx.fill();
+			} else {
+				ctx.stroke();
+			}
+		};
+		
+		
+	//create Moe Constructor
+		var Moe = function(x, y){
+		//x and y represent Moe's left position
+			this.x = x;
+			this.y = y;
+			
+		//y2 represents the bottom of Moe's legs
+			this.y2 = this.y + 100;
+			
+		//armX and armX2 represent Moe's right position
+			this.armX = this.x + 10;
+			this.armX2 = this.x+55;
+			
+		//bodyX and bodyX2 represent Moe's body x postion
+			this.bodyX = this.armX + 10;
+			this.bodyX2 = this.armX2 - 10;
+			
+		//direction represents Moe's direction
+			this.direction = "left";
+			
+		//animation step represents what position the legs are in
+			this.animationStep = 1;
+			
+		//jumpTimes represents how many times Moe has jumped	
+			this.jumpTimes = false;	
+			this.jumping = false;
+			
+		//this.jumpLimit represents how many times Moe can jump in a row
+			this.jumpLimit = 4;
+			
+		//airTime represents how long moe has been in the air
+			this.airTime = 0;
+		
+			this.landingOnBlock = false;
+			
+			// built in draw function
+				this.draw();
+				
+				this.blocksKilled = 0;	
+			};
+		
+	
+	//draw Moe	
+		Moe.prototype.draw = function() {
+		//draw head
+			circle(this.x + 30, this.y+30, 30, true, "Bisque");
+			
+		//draw eye
+			if (this.direction === "right") {
+				circle(this.x + 50, this.y+30, 5, true, "Black");
+			} else if (this.direction === "left") {
+				circle(this.x + 10, this.y+30, 5, true, "Black");
+			};
+		//draw head-band
+			ctx.lineWidth = 5;
+			ctx.beginPath();
+				ctx.strokeStyle = "DarkCyan";
+				ctx.moveTo(this.x, this.y + 20);
+				ctx.lineTo(this.x + 60, this.y + 20);
+			ctx.stroke();
+
+		//draw legs
+			ctx.strokeStyle = "Brown";
+			ctx.lineWidth = 10;
+			ctx.beginPath();
+		//moe's legs move, so the drawing is slightly different
+			if(this.animationStep < 2) { 
+				ctx.moveTo(this.x+25, this.y2-20);
+				ctx.lineTo(this.x+15, this.y2-5);
+				
+				ctx.moveTo(this.x+40, this.y2-20);
+				ctx.lineTo(this.x+40, this.y2);
+			} else {
+				ctx.moveTo(this.x+25, this.y2-20);
+				ctx.lineTo(this.x+25, this.y2);
+				
+				ctx.moveTo(this.x+40, this.y2-20);
+				ctx.lineTo(this.x+50, this.y2-5);
+			}
+			ctx.stroke();
+		
+		//draw arms
+			ctx.beginPath();
+			
+			ctx.moveTo(this.armX+15, this.y+70);
+			ctx.lineTo(this.armX, this.y+70);
+			
+			ctx.moveTo(this.armX2-10, this.y+70);
+			ctx.lineTo(this.armX2, this.y+70);
+			
+			ctx.stroke();
+		//draw body
+			ctx.fillStyle = "DarkCyan";
+			ctx.fillRect(this.x+20, this.y+60, 25, 25);
+			
+		};
+		
+		
+	//move when the player presses a key
+	Moe.prototype.move = function(block) {			
+		//only move if Moe is not touching a block
+			if(!this.cannotMove){
+				if(this.direction === "right"){
+					if (this.x+60 <= width) {
+						this.x+=6;
+
+					//change Moe's animation step because his legs are moving
+						this.animationStep --;
+						if (this.animationStep < 1) {
+							this.animationStep = 2;
+						};
+					} else {
+						this.x = 10;
+					};
+				
+				} else if (this.direction === "left"){
+			
+					if(this.x >= 0) {
+						this.x-=6;
+					//change Moe's animation step because his legs are moving
+						this.animationStep++;
+						if (this.animationStep > 2) {
+							this.animationStep = 1;
+						};
+					} else {
+						this.x = 690;
+					};
+				};
+			//since Moe has moved, reset x variables
+				this.armX = this.x + 10;
+				this.armX2 = this.x+55;
+				this.bodyX = this.armX + 10;
+				this.bodyX2 = this.armX2 - 10;
+				
+				this.checkHit(block);
+			};
+		};
+		
+	//create a function that causes Moe to fall
+	Moe.prototype.fall = function(block)	{
+		if((!this.jumping && this.y2 < height-10 || this.airTime > 5) && !this.landingOnBlock){
+				this.y += 3;
+				this.y2 = this.y+100;
+				
+				this.checkHit(block);
+		};
+	//if moe is not on the ground, increase airtime
+		if(this.y2 < height-10) {
+			this.airTime++;
+		}
+	//if Moe is touching the ground, set jumpTimes to 0 and jumping to false, and airTime to 0
+		if(this.y2 >= height-10) {
+			this.jumpTimes = 0;
+			this.jumping = false;
+			this.airTime  = 0;
+			
+		}
+	}
+	
+	
+	//Create a function to make Moe Jump
+	Moe.prototype.jump = function(block) {
+	
+	//if Moe hasn't already jumped twice, jump
+		if(this.jumpTimes < this.jumpLimit) {
+			this.y -=30;
+			this.y2 = this.y+100;
+			this.jumping = true;
+			this.jumpTimes+= 1;
+			this.airTime = 0;
+			
+		//if this is Moe's second jump, reset airTime and start falling
+			if(this.jumpTimes === this.jumpLimit) {
+				this.airTime = 0;
+				this.jumping = false;
+				
+			};
+			this.checkHit(block);
+		};		
+	};
+		
+	
+//make a function to check if Moe is getting killed by a block
+	Moe.prototype.updateHit = function(block) {
+	//update touching  variables
+		/*
+			Note: I am currently using bodyX variables
+				  instead of armX variables to make the 
+				  function flow better
+		*/
+		
+		//set body variables					
+								
+		this.withenBodyX = (this.bodyX > block.x &&  this.bodyX < block.x2) || 
+			(this.bodyX2 < block.x2 &&  this.bodyX2 > block.x); 
+			
+		this.withenY = this.y2 >= block.y && this.y2 <= block.y2;
+ 			
+		this.withenY_land = this.withenY && this.y2 <= block.y + 12;
+
+		this.landingOnBlock = this.withenBodyX && this.withenY_land;
+			
+		this.touching = this.withenBodyX && this.withenY;
+			
+		this.cannotMove = this.touching && !this.withenY_land;
+		if(this.touching && !this.landingOnBlock) {
+			this.endGame();
+		}
+		
+	}
+	
+	Moe.prototype.checkHit = function(block) {	
+	//if Moe is touching a block, end the Game
+		this.updateHit(block);
+		if(this.touching){
+			if(this.landingOnBlock) {
+				block.die();
+				this.blocksKilled ++;
+				if(this.blocksKilled > 2) {
+					this.win(id);
+				};
+				this.landingOnBlock = false;
+			} else {
+				this.endGame(id);
+			};
+		}
+	};	
+		
+//when the player presses a arrow key, change Moe's direction
+	Moe.prototype.changeDirection = function(direction, block){
+	//don't change direction if it's the wrong keys
+		if(direction !== undefined){
+		//if the new direction is jumping, jump. Else, change directions
+			if (direction === "jump") {
+				this.jump(block); 
+			} else { 
+				this.direction = direction;
+			//since Moe is facing a new direction reset the cannot move variables
+				this.cannotMoveLeft = this.touchingLeft && this.direction === "left";
+				this.cannotMoveRight = this.touchingRight && this.direction === "right"; 
+				this.cannotMove = this.cannotMoveLeft || this.cannotMoveRight;
+			}	
+		};
+	};
+	
+//create a function to end the game
+	Moe.prototype.endGame = function(game){
+		var score = this.blocksKilled;
+	//wait a small a mount of time so the canvas can update one more time
+		setTimeout(function() {
+			ctx.fillStyle = "Black";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.font = "50px Comic Sans MS";
+			ctx.fillText("Game Over", width/2, height/2);
+			ctx.font = "35px Comic Sans MS"
+			ctx.fillText("score : " + score, width/2, height/2 + 40);
+			ctx.font = "20px Comic Sans MS";
+			ctx.fillText("Press Space to play again", width / 2,  height/2 + 80);
+			clearInterval(game);
+			playing = false;
+		}, 50);
+	}; 
+	
+	Moe.prototype.win = function(game, block) {
+		setTimeout(function() {
+			ctx.fillStyle = "Black";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.font = "50px Comic Sans MS";
+			ctx.fillText("Success :)", width/2, height/2);
+			ctx.font = "20px Comic Sans MS";
+			ctx.fillText("Press Space", width/2, height/2 + 43);
+			ctx.fillText("to play again", width/2, height/2 + 57);
+			clearInterval(game);
+			playing = false;
+		}, 50);
+	}
+	
+	
+//create the Block constructor	
+	var Block = function(x) {
+		this.x = x;
+		this.y = height - 52;
+		this.x2 = this.x+50;
+		this.y2 = this.y + 42;
+		this.alive = true;
+	//built in draw function
+		this.draw();
+	}; 
+	
+//create a function to draw the block
+	Block.prototype.draw = function(){
+	//make sure that block is alive before you draw it
+		if(this.alive){
+			ctx.fillStyle = "FireBrick";
+			ctx.strokeStyle = "Black";
+			ctx.lineWidth = 4;
+			ctx.fillRect(this.x, this.y, 50, 40);
+			ctx.strokeRect(this.x, this.y, 50, 40);
+		//draw eye
+			ctx.beginPath();
+			ctx.lineWidth = 3;
+			ctx.fillStyle = "White";
+			ctx.arc(this.x2 - 20, this.y + 13, 7, Math.PI, 0, true);
+			ctx.lineTo(this.x2-25, this.y+10);
+			ctx.lineTo(this.x2-28, this.y+13);
+			ctx.fill();
+		};
+	};
+	
+	Block.prototype.move = function(moe) {
+		if(this.alive) {
+			this.x += 10;
+			this.x2 = this.x+50;
+			if(this.x2 > width) {
+				this.x = 0;
+				this.x2 = this.x+50;
+			} else if(this.x < 0) {
+				this.x = width;
+				this.x2 = this.x+50;
+			}
+		};
+	}
+//create a function that kills the block
+	Block.prototype.die = function() {
+		this.alive = false;
+		//destroy variables
+		this.y = null;
+		this.x = null;
+		this.x2 =null;
+	};  
+				
+//create background
+	var background = function(){
+		ctx.fillStyle = "CadetBlue";
+		ctx.fillRect(0, 0, width, height);
+		ctx.fillStyle = "FireBrick";
+		ctx.fillRect(0, height-10, width, 20);
+	};
+		
+	//create moe
+		var random = Math.floor(Math.random() * 60) - 30;	
+		
+		var moe = new Moe(600 + random, height-110);
+		
+	//create Block
+		var block = new Block(0);
+		
+	 	random = Math.floor(Math.random() * 80) - 40;
+		
+		var block2 = new Block(150 + random); 
+		
+		random = Math.floor(Math.random() * 80) - 40;
+		
+		var block3 = new Block(300 + random  );
+		
+		var block_array = [
+			block,
+			block2,
+			block3
+		];
+	//create game loop
+	let id;
+	function startGameLoop() {
+		id  = setInterval(function() {
+			ctx.clearRect(0,0,width, height);
+			background();	
+			moe.draw();
+			for (thing in block_array) {
+				var currentBlock = block_array[thing];
+				if(started) {
+					moe.fall(currentBlock);
+					moe.checkHit(currentBlock);
+					currentBlock.move(moe);
+				} else {
+					ctx.fillStyle = "Black";
+	    			ctx.textAlign = "center";
+	    			ctx.textBaseline = "middle";
+	    			ctx.font = "50px Comic Sans MS";
+	    			ctx.fillText("Ultimate Moe", width / 2, height / 2 - 20);
+	    			ctx.font = "30px Comic Sans MS";
+	    			ctx.fillText("Click to start", width / 2, height / 2 + 40);
+				}
+				currentBlock.draw();
+			}
+		}, 50);
+	}
+	
+	startGameLoop();
+	
+	//respond when the user clicks a key
+		$("body").keydown(function(event){
+			if(playing && started) {
+			//create a variable to store the movement name
+				var newDirection = keyNum[event.keyCode];
+				
+			//if the player is pausing the game, puase;
+				if(newDirection === "pause") {
+					started = false;
+					return;
+				}
+			//change moe's direction
+				moe.changeDirection(newDirection, block);
+		
+			// if the key is an arrow key, move. If it is the jump key, do not move
+				if (newDirection !== undefined && newDirection !== "jump") { 
+					for (thing in block_array) {
+						var curBlock = block_array[thing];
+						moe.move(curBlock);
+					};
+				};
+			};
+		});
+		$("body").click(function(event){
+			started = true;
+		});
+		
+		$("body").keyup(function (event) {
+			if(event.keyCode === 32 && !playing && started)
+				restart(id);
+		});
+		
+		function restart(id) {
+		//reset charachters
+			moe = new Moe(600, height - 110);
+			
+			block = new Block(0);
+
+			block2 = new Block(150 + random); 
+		
+			block3 = new Block(300 + random);
+		
+			block_array = [
+				block,
+				block2,
+				block3
+			];
+		//reset Interval
+			startGameLoop();
+			console.log(id);
+			playing = true;
+	
+		}																		
+	</script>
+</body>
+</html>	
